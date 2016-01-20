@@ -2,7 +2,7 @@
 
 In this assignment, you will set up the tools needed to submit assignments in CS 186.
 
-This assignment is due **Thursday, January 21** at **11:59 p.m. PST**.
+This assignment is due **Friday, January 22** at **11:59 p.m. PST**.
 
 ## Instructions (brief)
 1. If you don't have one yet, create a GitHub account.
