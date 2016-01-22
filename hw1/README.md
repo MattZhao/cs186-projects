@@ -52,6 +52,11 @@ We assign you a unique port based on your login, so that it doesn't conflict wit
     INST:~$ echo $JUPYTERPORT
     55555
 
+You will also need your Jupyter password:
+
+    INST:~$ cat ~/.jupyter/password
+    <YOUR PASSWORD HERE>
+
 In the following instructions, replace 55555 with the actual port number you see when running `echo $JUPYTERPORT`.
 
 Now, we can start an SSH connection with port forwarding. Log out of your instructional account. On your _local_ machine, run
@@ -62,7 +67,7 @@ Once this command logs you back into your instructional account, start the Jupyt
 
     INST:hw1$ jupyter notebook
 
-Then, on your local computer, you can point your web browser to http://localhost:55555, and you should see the Jupyter notebook dashboard.
+Then, on your local computer, you can point your web browser to http://localhost:55555, and you should see the Jupyter notebook dashboard. When prompted for your password, paste in the password from above.
 
 Click on `hw1.ipynb` to begin this assignment.
 
