@@ -71,7 +71,11 @@ Then, on your local computer, you can point your web browser to http://localhost
 
 Click on `hw1.ipynb` to begin this assignment.
 
-*Note*: if, when starting Jupyter, you see `ERROR: the notebook server could not be started because no available port could be found.` then you may already have a Jupyter server running. You can kill it (which may lose unsaved work) using `pkill -f jupyter`, and then try running `jupyter notebook` again.
+**Note**: if, when starting Jupyter, you see `ERROR: the notebook server could not be started because no available port could be found.` then you may already have a Jupyter server running. You can kill it (which may lose unsaved work) using:
+
+    pkill -f jupyter -u $USER
+
+Then try running `jupyter notebook` again.
 
 ##Specification
 Your solution should be driven by the `process_logs()` function in hw1.ipynb. It is passed one argument: an iterator (or stream) of log lines to be parsed. This input stream can only be iterated over *once*.
