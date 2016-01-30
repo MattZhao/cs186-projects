@@ -1,2 +1,2 @@
-hw1/*.csv
-hw1/*.csv.diff
+hw*/*.csv.*
+.DS_Store
