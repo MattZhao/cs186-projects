@@ -160,8 +160,8 @@ As a warm-up, we would like you to perform a simple computation within the Spark
 For this task, load the passed-in text file into an RDD using `sc.textFile` and return a **python list** of the 20 words that appear most frequently, along with their counts. You should convert all characters to lower case and split on any whitespace.  (If you happen to know what [stemming](https://en.wikipedia.org/wiki/Stemming) is, don't do it here -- we'll take the lowercased text verbatim.)
 
 **Tips:**
-- Potentially useful [PySpark methods](https://github.com/berkeley-cs186/course/blob/master/hw3/README.md#useful-documentation): `flatMap, map, reduceByKey, and top`
-- The output of this function should look like: `[('the', 692), ('and', 671), ('i', 635), … ('his', 165)]`
+- Potentially useful [PySpark methods](https://github.com/berkeley-cs186/course/blob/master/hw3/README.md#useful-documentation): `flatMap, map, reduceByKey, takeOrdered, and/or top` (you may change the provided `result_rdd.take(20)`)
+- The output of this function should look like: `[('the', 692), ('and', 671), ('i', 638), … ('his', 165)]`
 - Functions like `reduceByKey` operate on tuples in python that are of the form `(key, value)`.
 
 ## Part 2: Diving Right In - PySpark Fundamentals
