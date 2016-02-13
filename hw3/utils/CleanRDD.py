@@ -28,13 +28,13 @@ class CleanRDD(object):
 
     def sample(self, withReplacement, fraction, seed=None):
         """
-        Return a list that contains all of the elements in this RDD.
+        Return a sampled subset of this RDD.
         """
         return self.__class__(self.__sparkrdd.sample(withReplacement, fraction, seed))
 
     def count(self):
         """
-        Return a list that contains all of the elements in this RDD.
+        Return the number of elements in the RDD.
         """
         return self.__sparkrdd.count()
     
