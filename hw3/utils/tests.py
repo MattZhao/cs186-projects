@@ -115,7 +115,7 @@ def test3ClockMap(ClockMap):
     check_dir()
     clock = ClockMap(4, lambda x: x ** 2)
     requests = [1, 2, 3, 4, 1, 6, 1, 4, 7, 4, 7, 5, 4, 6]
-    with open(your_output + "task3ClockMap.txt", "w") as f:
+    with open(your_output + "task3ClockMap.txt", "wb") as f:
         writer = csv.writer(f)
         writer.writerow(["Request", "Result", "Pointer", "Increments"])
         for r in requests:
