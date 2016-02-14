@@ -218,7 +218,7 @@ Check [this](https://docs.python.org/2/reference/datamodel.html#object.__getitem
 Then, fill out `cacheMap()` such that the output is the same as `rdd.map`, with each partition using a `ClockMap` to do its calculations. You may write helper functions if you desire.
 
 ## Part 4: External Algorithms
-Let's now think about how we can externally sort RDDs. We'll merge ideas from both external hashing and external sorting to achieve this (remember the lectures on external two-phase algorithms?). You can use the built-in `sorted()` or `.sort` if your list/collection is relatively small (not in the order of MBs).
+Let's now think about how we can externally sort RDDs. We'll merge ideas from both external hashing and external sorting to achieve this (remember the lectures on external two-phase algorithms?). You can use the built-in `sorted()` or `.sort` for any _in-memory_ sorting.
 
 ### Big picture:
 `partitionByKey` is used to generate partitions. `externalSortStream` is used to sort each partition, in which you need to perform an external sort. `sortByKey` is the combining of the partitioning from above and the external sorting of the partition.
