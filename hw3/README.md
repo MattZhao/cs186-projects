@@ -189,7 +189,7 @@ You are given a filename, a delimiter character and a specified number of instan
 - `textFile()` should return a generator (you should `yield` great things).
 - The output of `readlinesInPartition()` should *not* include the delimiter.
 - Use the file's size in bytes and number of partitions to help determine where in the file each partition should start loading from.  You don't have to split the file perfectly evenly (but you can if you like).
-- The test we've included replaces all `'\n'`'s with `'\\n'`'s, which should make test output easier to parse.
+- The test we've included in `utils/tests.py` replaces all `'\n'`'s with `'\\n'`'s, which should make test output easier to parse. You can run these tests at the bottom of each notebook.
 
 
 ### 2.2: RDD Transformations
