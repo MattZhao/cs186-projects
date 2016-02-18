@@ -138,6 +138,8 @@ If you would like to work on your personal machine, we have provided a special s
 
 - **Debugging:** We haven't included any special accommodations for debugging - the unfortunate reality is that printing inside an RDD method produces output in the terminal, as opposed to the notebook interface. You may create extra cells to test and play with code, but please keep your notebook orderly and delete scratch work before submission. Use `shift-enter` to run an individual cell, and `b` to create an extra cell below the current cell (you may need to `Esc` out of the cell you are editing).  That said we have tried to provide some test cells for functions that would normally be executed inside the RDD (e.g., `readlinesInPartition`) so you can test those functions before they are called from within Spark.
 
+- **collect():** If you're stuck or confused, you may want to use `collect()` to verify what your dataset looks like.  That being said, we want you to utilize the Spark framework, so **you should not use collect() in your final implementations**, except perhaps selectively in Part 4. Note that `collect()` will produce an array, which will cause your code to fail when your dataset does not fit in memory.
+
 - **The [OPTIONAL] tag:** These methods are only for _assistance_ in your code design. You are not required to fill them out. Keep in mind that though these methods are not graded, they are probably good for you (like vitamins).
  
 - **Jupyter:**
