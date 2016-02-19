@@ -7,7 +7,7 @@ import hashlib
 def download_spark():
     bytes_written = 0
     spark_url = "http://eecs.berkeley.edu/~jegonzal/cs186_spark.tar.bz2"
-    md5sum = "aa598e3fd8162b637a90f99af68b35e6"
+    md5sum = "fa66ead78d3b40e68472f55a63dcdb55"
     if not os.path.exists("cs186_spark.tar.bz2"):
         print "Downloading Spark"
         resp = urllib2.urlopen(spark_url)
