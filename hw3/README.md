@@ -306,5 +306,4 @@ To submit, remember to push to `release/hw3` with:
 
 Detailed submission instructions are in [HW0](https://github.com/berkeley-cs186/course/tree/master/hw0).
 
-#### Please?
-Fill out our [HW3 Evaluation and Feedback form](https://docs.google.com/a/berkeley.edu/forms/d/1i-e2ycn3q9GRvufmon7cI7U5M9NimpwUjgWbdTKYnKg/viewform) to help us with HW5 and future iterations of this course!
+#### Fill out the [HW3 Evaluation form](https://docs.google.com/a/berkeley.edu/forms/d/1i-e2ycn3q9GRvufmon7cI7U5M9NimpwUjgWbdTKYnKg/viewform).
