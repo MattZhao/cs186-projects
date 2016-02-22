@@ -198,7 +198,7 @@ You are given a filename, a delimiter character and a specified number of instan
 
 Much of the Spark RDD API can be built using a few basic RDD operations like `mapPartitionsWithIndex`, `zipPartitions`, and `partitionBy`.  In this part of the homework we will be writing several of the higher level operations using (`filter`, `flatMap`, `reduceByKey`, and `join`) using just these basic building blocks.  All functions in `utils/CleanRDD.py` are available for you to use - it is a subset of the actual RDD implementation. The purpose is for you to understand how to compose many transformations using basic primitives. Please do not try to break any abstraction barriers.
 
-For this task, implement `filter`, `flatMap`, `reduceByKey`, and `join` (you may implement these in any order).  More details on what each function should do are provided in the notebook comment blocks.
+For this task, implement `filter`, `flatMap`, `reduceByKey`, and `join` (you may implement these in any order).  More details on what each function should do are provided in the notebook comment blocks. If numPartitions is not given, you should maintain the same number of current partitions.
 
 ---
 **Note:** Parts 3 and 4 can be found in `HW3_II.ipynb`.
@@ -267,7 +267,7 @@ Instructions/Tips for `externalSortStream` (note that this is slightly different
   - `serializer` methods include `.dump_stream(iterable, file)` and `.load_stream(file)`. You can treat the return value of `load_stream` as an iterable.
  - If you can't decide on a file naming convention, use `get_sort_dir()` and move on.
  - You should probably get rid of your temporary file runs - you can use `os.unlink` to delete a file. Special note: it will not delete a file currently open/in use - if this function is called on a file, the file will not be deleted until the file is closed.
- - Merge is done for you via `heapq.merge`. Please reference the [API](https://docs.python.org/2/library/heapq.html#heapq.merge) for further information of usage.
+ - Merge is done for you via `heapq.merge`. Please reference the [API](http://people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html) for further information of usage.
  - Partial credit will be given for non-external (internal) sort implementations.
 
 ### 4.2 Bucket Sampling and Partitioning
@@ -284,6 +284,7 @@ Instructions:
  - You want to write a function that will bucket your data (think coarse partitioning) - given that you've calculated your buckets
  - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
  - `bisect.bisect_left` will come in handy.
+ - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
  - Use Google or the Python API if you're lost.
 
 ### 4.3 Wire it together
