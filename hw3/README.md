@@ -1,7 +1,8 @@
 # Homework 3: PySpark
 ### CS186, UC Berkeley, Spring 2016
 #### Points: [10% of your final grade](https://sites.google.com/site/cs186spring2016/home/basic-information)
-#### Due: Thursday Feb 25, 2016, 11:59 PM
+#### Parts 1, 2 Due: Thursday Feb 25, 2016, 11:59 PM
+#### Parts 3, 4 Due: Friday Mar 4, 2016, 11:59 PM
 #### Note: *This homework is to be done individually!*
 
 
