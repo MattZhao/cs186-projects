@@ -215,6 +215,24 @@ clock[5] = 25
 clock[1] = 1  # cache miss
 clock[1] = 1  # cache hit
 ```
+
+Description for the instance variables:
+
+Assume `x` is the input to the function, and `self.fn(x)` is the output.
+
+ - `self.cacheSize = cacheSize`: Number of buffers to use
+ - `self.fn = func`: The function whose results that you will be caching 
+ - `self._p`: Pointer
+ - `self._increments`: (Test purpose - Don't modify) Number of times you increment the pointer
+ - `self._miss_count`: (Test purpose - Don't modify) Number of times you miss
+ - `self.buffers = [[None, 0] for x in range(cacheSize)]`: 
+  - Suggested Usage:
+    - Each element in this array will have `[Item, Second-Chance-Bit]`. What you put in the item is up to you, but you should not be recalculating the function output if it already exists in the buffer. 
+    - The `Item` can be the value of `self.fn(x)`, or `(x, self.fn(x))`, or whatever.
+  - `len(self.buffers)` should never change
+ - `self.items_to_index = {}`: Should be a dictionary mapping from input to buffer location. Used such that you have O(1) lookup.
+  - Suggested usage: `self.items_to_index[x] = buffer_index`.  
+ 
 Check [this](https://docs.python.org/2/reference/datamodel.html#object.__getitem__) out if you are confused about how the `__getitem__` function works (needed to implement `clock[key]`).
 
 ### 3.2 Implement cacheMap
