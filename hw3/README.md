@@ -201,6 +201,8 @@ Much of the Spark RDD API can be built using a few basic RDD operations like `ma
 
 For this task, implement `filter`, `flatMap`, `reduceByKey`, and `join` (you may implement these in any order).  More details on what each function should do are provided in the notebook comment blocks. If numPartitions is not given, you should maintain the same number of current partitions.
 
+##### Quick clarifications: `filter` and `flatMap` are streaming. `reduceByKey` and `join` will require you to materialize the data. In reality, materializing the data may not fit into memory. Therefore, in real life, you'll need to utilize out-of-core mechanisms, but making you do that for a 2 week project would be cruel and inhumane, so *you can ignore this for now*.
+
 ---
 **Note:** Parts 3 and 4 can be found in `HW3_II.ipynb`.
 
@@ -300,8 +302,9 @@ You want to write a function that samples the RDD and partitions the data in suc
 
 Instructions:
  - Use Google or the Python API if you're lost.
- - Try sampling about 10 per partition (expected value). You can do this using the given `sample` function (without replacement). 
+ - Try sampling about 10 elements per partition (expected value). You can do this using the given `sample` function (without replacement). 
    - `collect` it because `rdd.sample` returns a smaller RDD with sampled elements.
+   - For example: If numPartitions=6, you want 10 per partition - hence 6 * 10 = 60.
  - Use these samples to find a list of boundaries (like pivot points). 
    - For example: If numPartitions=6, you'll want to find 5 key boundaries [x1, x2, x3, x4, x5] such that the first partition will have all elements with key < x1, second partition will have elements with key such that x1 <= key < x2, ... 6th partition will have elements with key such that x5 <= key.
  - You want to write a function that will bucket your data - given that you've calculated your bucket boundaries.
