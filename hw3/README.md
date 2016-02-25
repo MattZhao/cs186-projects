@@ -310,7 +310,7 @@ Instructions:
  - You want to write a function that will bucket your data - given that you've calculated your bucket boundaries.
    - `bisect.bisect_left` will come in handy. This function _expects_ the array given to be ascending (play around with it).
  - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
- - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
+ - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.)
 
 ### 4.3 Wire it together
 Fill out the function:
