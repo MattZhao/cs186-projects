@@ -284,6 +284,8 @@ Instructions/Tips for `externalSortStream` (note that this is slightly different
   - `serializer` object is imported for you from `utils`.
   - The `serializer` is used to transfer a stream (in our case, an iterator) to and from disk.
   - `serializer` methods include `.dump_stream(iterable, file)` and `.load_stream(file)`. You can treat the return value of `load_stream` as an iterable.
+  - The temporary files are not human-readable. Don't try to open them.
+  - `with` blocks will automatically close your file - use them accordingly.
  - If you can't decide on a file naming convention, use `get_sort_dir()` and move on.
  - You should probably get rid of your temporary file runs - you can use `os.unlink` to delete a file. Special note: it will not delete a file currently open/in use - if this function is called on a file, the file will not be deleted until the file is closed.
  - Merge is done for you via `heapq.merge`. Please reference the [API](http://people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html) for further information of usage.
@@ -294,15 +296,16 @@ Fill out the function:
 ```python
 def partitionByKey(self, ascending=True, numPartitions=None, keyfunc=lambda x: x)
 ```
-You want to write a function that samples the RDD and partitions the data in such a way that we can get approximately evenly distributed partitions. We have taken care of the parameter edge cases.
+You want to write a function that samples the RDD and partitions the data in such a way that we can get approximately evenly distributed partitions. We have taken care of the parameter edge cases. This function assumes that the keys are diverse (a lot of unique keys).  `getBuckets` will help you modularize your implementation - it is up to you as to how you want to use it.
 
 Instructions:
- - `getBuckets` will help you modularize your implementation - it is up to you as to how you want to use it.
- - Try sampling about 10 per partition (expected value). You can do this using the given `sample` function (without replacement).
- - Use these samples (maybe `collect` it?) to find (a list of) boundaries for each bucket.
- - You want to write a function that will bucket your data (think coarse partitioning) - given that you've calculated your buckets
+ - Try sampling about 10 per partition (expected value). You can do this using the given `sample` function (without replacement). 
+ - Use these samples to find a list of boundaries (like pivot points). 
+   - For example: If numPartitions=6, you'll want to find 5 key boundaries [x1, x2, x3, x4, x5] such that the first partition will have all elements with key < x1, second partition will have elements with key such that x1 <= key < x2, ... 6th partition will have elements with key such that x5 <= key.
+   - `collect` it because `rdd.sample` returns a smaller RDD with sampled elements.
+ - You want to write a function that will bucket your data - given that you've calculated your bucket boundaries.
  - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
- - `bisect.bisect_left` will come in handy.
+ - `bisect.bisect_left` will come in handy. This function _expects_ the array given to be ascending (play around with it).
  - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
  - Use Google or the Python API if you're lost.
 
