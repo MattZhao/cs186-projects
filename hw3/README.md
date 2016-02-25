@@ -201,6 +201,8 @@ Much of the Spark RDD API can be built using a few basic RDD operations like `ma
 
 For this task, implement `filter`, `flatMap`, `reduceByKey`, and `join` (you may implement these in any order).  More details on what each function should do are provided in the notebook comment blocks. If numPartitions is not given, you should maintain the same number of current partitions.
 
+##### Quick clarifications: `filter` and `flatMap` are streaming. `reduceByKey` and `join` will require you to materialize the data. In reality, materializing the data may not fit into memory. Therefore, in real life, you'll need to utilize out-of-core mechanisms, but making you do that for a 2 week project would be cruel and inhumane, so *you can ignore this for now*.
+
 ---
 **Note:** Parts 3 and 4 can be found in `HW3_II.ipynb`.
 
@@ -215,6 +217,24 @@ clock[5] = 25
 clock[1] = 1  # cache miss
 clock[1] = 1  # cache hit
 ```
+
+Description for the instance variables:
+
+Assume `x` is the input to the function, and `self.fn(x)` is the output.
+
+ - `self.cacheSize = cacheSize`: Number of buffers to use
+ - `self.fn = func`: The function whose results that you will be caching 
+ - `self._p`: Pointer
+ - `self._increments`: (Test purpose - Don't modify) Number of times you increment the pointer
+ - `self._miss_count`: (Test purpose - Don't modify) Number of times you miss
+ - `self.buffers = [[None, 0] for x in range(cacheSize)]`: 
+  - Suggested Usage:
+    - Each element in this array will have `[Item, Second-Chance-Bit]`. What you put in the item is up to you, but you should not be recalculating the function output if it already exists in the buffer. 
+    - The `Item` can be the value of `self.fn(x)`, or `(x, self.fn(x))`, or whatever.
+  - `len(self.buffers)` should never change
+ - `self.items_to_index = {}`: Should be a dictionary mapping from input to buffer location. Used such that you have O(1) lookup.
+  - Suggested usage: `self.items_to_index[x] = buffer_index`.  
+ 
 Check [this](https://docs.python.org/2/reference/datamodel.html#object.__getitem__) out if you are confused about how the `__getitem__` function works (needed to implement `clock[key]`).
 
 ### 3.2 Implement cacheMap
@@ -266,6 +286,8 @@ Instructions/Tips for `externalSortStream` (note that this is slightly different
   - `serializer` object is imported for you from `utils`.
   - The `serializer` is used to transfer a stream (in our case, an iterator) to and from disk.
   - `serializer` methods include `.dump_stream(iterable, file)` and `.load_stream(file)`. You can treat the return value of `load_stream` as an iterable.
+  - The temporary files are not human-readable. Don't try to open them.
+  - `with` blocks will automatically close your file - use them accordingly.
  - If you can't decide on a file naming convention, use `get_sort_dir()` and move on.
  - You should probably get rid of your temporary file runs - you can use `os.unlink` to delete a file. Special note: it will not delete a file currently open/in use - if this function is called on a file, the file will not be deleted until the file is closed.
  - Merge is done for you via `heapq.merge`. Please reference the [API](http://people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html) for further information of usage.
@@ -276,17 +298,19 @@ Fill out the function:
 ```python
 def partitionByKey(self, ascending=True, numPartitions=None, keyfunc=lambda x: x)
 ```
-You want to write a function that samples the RDD and partitions the data in such a way that we can get approximately evenly distributed partitions. We have taken care of the parameter edge cases.
+You want to write a function that samples the RDD and partitions the data in such a way that we can get approximately evenly distributed partitions. We have taken care of the parameter edge cases. This function assumes that the keys are diverse (a lot of unique keys).  `getBuckets` will help you modularize your implementation - it is up to you as to how you want to use it.
 
 Instructions:
- - `getBuckets` will help you modularize your implementation - it is up to you as to how you want to use it.
- - Try sampling about 10 per partition (expected value). You can do this using the given `sample` function (without replacement).
- - Use these samples (maybe `collect` it?) to find (a list of) boundaries for each bucket.
- - You want to write a function that will bucket your data (think coarse partitioning) - given that you've calculated your buckets
- - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
- - `bisect.bisect_left` will come in handy.
- - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
  - Use Google or the Python API if you're lost.
+ - Try sampling about 10 elements per partition (expected value). You can do this using the given `sample` function (without replacement). 
+   - `collect` it because `rdd.sample` returns a smaller RDD with sampled elements.
+   - For example: If numPartitions=6, you want 10 per partition - hence 6 * 10 = 60.
+ - Use these samples to find a list of boundaries (like pivot points). 
+   - For example: If numPartitions=6, you'll want to find 5 key boundaries [x1, x2, x3, x4, x5] such that the first partition will have all elements with key < x1, second partition will have elements with key such that x1 <= key < x2, ... 6th partition will have elements with key such that x5 <= key.
+ - You want to write a function that will bucket your data - given that you've calculated your bucket boundaries.
+   - `bisect.bisect_left` will come in handy. This function _expects_ the array given to be ascending (play around with it).
+ - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
+ - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.)
 
 ### 4.3 Wire it together
 Fill out the function:
