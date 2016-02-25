@@ -299,15 +299,15 @@ def partitionByKey(self, ascending=True, numPartitions=None, keyfunc=lambda x: x
 You want to write a function that samples the RDD and partitions the data in such a way that we can get approximately evenly distributed partitions. We have taken care of the parameter edge cases. This function assumes that the keys are diverse (a lot of unique keys).  `getBuckets` will help you modularize your implementation - it is up to you as to how you want to use it.
 
 Instructions:
+ - Use Google or the Python API if you're lost.
  - Try sampling about 10 per partition (expected value). You can do this using the given `sample` function (without replacement). 
+   - `collect` it because `rdd.sample` returns a smaller RDD with sampled elements.
  - Use these samples to find a list of boundaries (like pivot points). 
    - For example: If numPartitions=6, you'll want to find 5 key boundaries [x1, x2, x3, x4, x5] such that the first partition will have all elements with key < x1, second partition will have elements with key such that x1 <= key < x2, ... 6th partition will have elements with key such that x5 <= key.
-   - `collect` it because `rdd.sample` returns a smaller RDD with sampled elements.
  - You want to write a function that will bucket your data - given that you've calculated your bucket boundaries.
- - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
- - `bisect.bisect_left` will come in handy. This function _expects_ the array given to be ascending (play around with it).
+   - `bisect.bisect_left` will come in handy. This function _expects_ the array given to be ascending (play around with it).
  - Your first partition should correspond to the first segment of your entire sorted output. This should give you the effect that "collect" will be in order despite multiple partitions (we will be relaxed about this when testing)
- - Use Google or the Python API if you're lost.
+ - The `partitionBy`  assumes all your elements are `(k, v)` pairs. It has a parameter `partitionFunc` that takes in a function (replace `balanceLoad` that takes in a key and outputs the index of the bucket.
 
 ### 4.3 Wire it together
 Fill out the function:
