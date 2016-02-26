@@ -324,10 +324,16 @@ At the bottom of each notebook will be several tests** - run them to check and v
 
 _**featuring Shakespeare's [As You Like It](http://shakespeare.mit.edu/asyoulikeit/full.html)_
 
-## Submission instructions
-To submit, remember to push to `release/hw3` with:
+## UPDATED: Submission instructions
+To submit the first two parts of this assignment, due **2/25 at 11:59 pm**, push your submission (with your code in `HW3_I.ipynb`) to `release/hw3`:
 
     $ git push origin master:release/hw3
+
+To submit the second two parts of this assignment, due **3/4 at 11:59 pm**, push your submission (with your code in `HW3_II.ipynb`) to `release/hw3nb2`:
+
+    $ git push origin master:release/hw3nb2
+
+**Caution: Be very careful not to push to `release/hw3` when working on the second notebook.** We are using the separate branches to track slip days - any push to `release/hw3` after 11:59pm on 2/25 will be interpreted as a late submission (and will incur slip time).
 
 Detailed submission instructions are in [HW0](https://github.com/berkeley-cs186/course/tree/master/hw0).
 
