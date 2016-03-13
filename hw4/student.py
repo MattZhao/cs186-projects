@@ -1,7 +1,7 @@
 import logging
 
 from kvstore import DBMStore, InMemoryKVStore
-
+from collections import deque
 LOG_LEVEL = logging.WARNING
 
 KVSTORE_CLASS = InMemoryKVStore
@@ -39,10 +39,19 @@ is initially empty.
 You may assume that the key/value inputs to these methods are already type-
 checked and are valid.
 """
+class _Lock:
+    def __init__(self, curT = [], curL):
+        self.curL = curL
+        self.curT = curT
+        self.queue = deque([])
 
 class TransactionHandler:
 
     def __init__(self, lock_table, xid, store):
+        '''
+        Each lock in _lock_table is a class that includes a QUEUE
+        Each lock in _desired_lock & _acquired_locks is only a (key, type) tuple
+        '''
         self._lock_table = lock_table
         self._acquired_locks = []
         self._desired_lock = None
@@ -72,9 +81,40 @@ class TransactionHandler:
         acquire the lock, returns None, and saves the lock that the transaction
         is waiting to acquire in self._desired_lock.
         """
-        # Part 1.1: your code here!
-        self._store.put(key, value)
-        return 'Success'
+        lock = self._lock_table.get(key)
+        if not lock:
+            self._lock_table[key] = _Lock([self._xid], "x")
+            self._undo_log.append((key, None))
+            self._store.put(key, value)
+            self._acquired_locks.append((key, "x"))
+            return 'Success'
+        elif lock:
+            if lock.curL == "x":
+                if lock.curT[0] == self._xid:
+                    old_val = self._store.get(key)
+                    self._undo_log.append((key, old_val))
+                    self._store.put(key, value)
+                    return 'Success'
+                else:
+                    self._lock_table.get(key).queue.append([self._xid, "x"])
+            elif lock.curL == "s":
+                if len(lock.curT) == 1 and lock.curT[0] = self._xid:
+                    # upgrade from "s" to "x" lock
+                    self._lock_table.get(key).curL = "x"
+                    old_val = self._store.get(key)
+                    self._undo_log.append((key, ol_val))
+                    self._store.put(key, value)
+                    self._acquired_locks.remove((key, "s"))
+                    self._acquired_locks.append((key, "x"))
+                    return 'Success'
+                elif len(lock.curT) > 1 and self._xid in lock.curT:
+                    # append "x" lock to top of queue 
+                    self._lock_table.get(key).curT.remove(self._xid) 
+                    self._lock_table.get(key).queue.appendleft([self._xid, "x"]) 
+                    self._desired_lock = (key, "x")
+                else:
+                    self._lock_table.get(key).queue.append([self.xid, "x"])
+                    self._desired_lock = (key, "x")
 
     def perform_get(self, key):
         """
@@ -94,11 +134,18 @@ class TransactionHandler:
         and saves the lock that the transaction is waiting to acquire in
         self._desired_lock.
         """
-        # Part 1.1: your code here!
-        value = self._store.get(key)
-        if value is None:
-            return 'No such key'
+        lock = self._lock_table.get(key)
+        if lock != None and self._xid not in lock.curT:
+                # assume a "x" lock also permits reading
+                self._lock_table.get(key).queue.append([self._xid, "s"])
+                self._desired_lock = (key, "s")
         else:
+            value = self._store.get(key) 
+            if value is None:
+                return 'No such key'
+            if lock == None:
+                self._lock_table[key] = _Lock([self._xid], "s")
+                self._acquired_locks = (key, "s")
             return value
 
     def release_and_grant_locks(self):
@@ -113,9 +160,21 @@ class TransactionHandler:
 
         @param self: the transaction handler.
         """
+
+        # upgrade happens automatically
         for l in self._acquired_locks:
-            pass # Part 1.2: your code here!
+            key = l[0]
+            lock = self._lock_table.get(key)
+            lock.curL.remove(key)
+            if len(lock.curT) == 0:
+                if len(lock.queue) != 0:
+                    ll = lock.queue.popleft()
+                    lock.curL = ll[1]
+                    lock.curT.append(ll[0])
+                else:
+                    lock.curL = None
         self._acquired_locks = []
+        self._desired_lock = None
 
     def commit(self):
         """
