@@ -122,7 +122,7 @@ class TransactionHandler:
                         lock.queue.insert(0,[self._xid, "x", value]) 
                         self._desired_lock = (key, "x")
                 else:
-                    lock.queue.append([self.xid, "x", value])
+                    lock.queue.append([self._xid, "x", value])
                     self._desired_lock = (key, "x")
 
     def perform_get(self, key):  
@@ -333,7 +333,7 @@ class TransactionHandler:
                         self._desired_lock = None
                         value = self._store.get(key)
                         if value == None:
-                            return 'No Such Key'
+                            return 'No such key'
                         return value
 
 

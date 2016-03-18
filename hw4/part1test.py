@@ -190,6 +190,7 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t1.check_lock(), '0')                        
         self.assertEqual(t1.perform_get('a'), '0')
 
+    # PASSED
     def test_unlock_ww(self):
         # Should pass after 1.3
         lock_table = {}
@@ -205,6 +206,118 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.commit(), 'Transaction Completed')
         self.assertEqual(t1.check_lock(), 'Success')           # AssertionError: None != 'Success'
         self.assertEqual(t1.perform_get('a'), '1')
+
+    # PASSED
+    def test_multiple_read(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        t3 = TransactionHandler(lock_table, 3, store)
+        self.assertEqual(t0.perform_get('apple'), 'No such key')
+        self.assertEqual(t1.perform_get('apple'), 'No such key')
+        self.assertEqual(t2.perform_get('apple'), 'No such key')
+        self.assertEqual(t0.perform_put('apple', '11'), None)   
+        self.assertEqual(t0.check_lock(), None)      
+        self.assertEqual(t1.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), None)
+        self.assertEqual(t2.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), "Success")
+        self.assertEqual(t0.perform_get('apple'), '11')
+        self.assertEqual(t0.perform_get('banana'), 'No such key')
+        self.assertEqual(t1.perform_get('apple'), None)
+        self.assertEqual(t0.commit(), "Transaction Completed")
+        self.assertEqual(t1.perform_get("apple"), "11")
+        self.assertEqual(t2.perform_get("apple"), "11")
+        self.assertEqual(t3.perform_get("apple"), "11")
+
+    # PASSED 
+    def test_1_thread_on_multiple_keys(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        t3 = TransactionHandler(lock_table, 3, store)
+        self.assertEqual(t0.perform_get('apple'), 'No such key')
+        self.assertEqual(t1.perform_get('apple'), 'No such key')
+        self.assertEqual(t2.perform_get('apple'), 'No such key')
+        self.assertEqual(t0.perform_put('apple', '11'), None)   
+        self.assertEqual(t0.check_lock(), None)      
+        self.assertEqual(t1.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), None)
+        self.assertEqual(t2.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), "Success")
+        self.assertEqual(t0.perform_get('apple'), '11')
+        self.assertEqual(t0.perform_put('apple', "10000"), 'Success')
+        self.assertEqual(t0.perform_get('apple'), '10000')
+        self.assertEqual(t0.perform_put("banana", '22'), "Success")
+        self.assertEqual(t0.perform_get('banana'), '22')
+        self.assertEqual(t1.perform_get('apple'), None)
+        self.assertEqual(t0.commit(), 'Transaction Completed')
+        self.assertEqual(t1.check_lock(),'10000')
+        self.assertEqual(t1.perform_get("apple"), "10000")
+        self.assertEqual(t2.perform_get("apple"), "10000")
+        self.assertEqual(t3.perform_get("apple"), "10000")
+
+    # PASSED
+    def test_single_abort(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        t3 = TransactionHandler(lock_table, 3, store)
+        self.assertEqual(t0.perform_get('apple'), 'No such key')
+        self.assertEqual(t1.perform_get('apple'), 'No such key')
+        self.assertEqual(t2.perform_get('apple'), 'No such key')
+        self.assertEqual(t0.perform_put('apple', '11'), None)   
+        self.assertEqual(t0.check_lock(), None)      
+        self.assertEqual(t1.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), None)
+        self.assertEqual(t2.commit(), 'Transaction Completed')
+        self.assertEqual(t0.check_lock(), "Success")
+        self.assertEqual(t0.perform_get('apple'), '11')
+        self.assertEqual(t0.perform_get('banana'), 'No such key')
+        self.assertEqual(t0.perform_put("banana", '22'), "Success")
+        self.assertEqual(t1.perform_get('apple'), None)
+        self.assertEqual(t0.abort(USER), 'User Abort')
+        self.assertEqual(t1.check_lock(),'No such key')
+
+    # PASSED
+    def test_upgrade_s_x_multi(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        self.assertEqual(t0.perform_put('noob', '555'), 'Success')
+        self.assertEqual(t0.commit(),'Transaction Completed')
+        self.assertEqual(t0.perform_get('noob'), '555')
+        self.assertEqual(t1.perform_get('noob'),'555')
+        self.assertEqual(t2.perform_get('noob'), '555')
+        self.assertEqual(t1.perform_put('noob', '111'), None)
+        self.assertEqual(t1.check_lock(), None)      
+        self.assertEqual(t0.commit(), 'Transaction Completed')
+        self.assertEqual(t1.check_lock(), None)      
+        self.assertEqual(t2.commit(), 'Transaction Completed')
+        self.assertEqual(t1.check_lock(), 'Success')  
+        self.assertEqual(t1.perform_get('noob'), '111')    
+
+    # PASSED
+    def test_upgrade_in_put(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        self.assertEqual(t0.perform_get('apple'), 'No such key')
+        self.assertEqual(t1.perform_put('apple', '333'), None)
+        self.assertEqual(t0.perform_put('apple', 'aaa'), 'Success')
+        self.assertEqual(t0.perform_get('apple'), 'aaa')
+
+
 
 if __name__ == '__main__':
     unittest.main()
