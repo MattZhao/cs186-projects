@@ -39,7 +39,7 @@ You may assume that the key/value inputs to these methods are already type-
 checked and are valid.
 """
 class _Lock:
-    def __init__(self, curT = [], curL):
+    def __init__(self, curT, curL, walToWrite = None):
         """
         curT: current transactions: "_xid"
         curL: current lock type: "x" or "s"
@@ -48,6 +48,7 @@ class _Lock:
         self.curL = curL    
         self.curT = curT
         self.queue = list()
+        self.valToWrite = walToWrite
 
 class TransactionHandler:
 
@@ -57,11 +58,12 @@ class TransactionHandler:
         Each lock in _desired_lock & _acquired_locks is only a (key, type) tuple
         '''
         self._lock_table = lock_table
-        self._acquired_locks = []
+        self._acquired_locks = {}
         self._desired_lock = None
         self._xid = xid
         self._store = store
         self._undo_log = []
+
 
     def perform_put(self, key, value):
         """
@@ -88,30 +90,22 @@ class TransactionHandler:
         lock = self._lock_table.get(key)
         if lock == None:
             self._lock_table[key] = _Lock([self._xid], "x")
+            self._acquired_locks[key] = "x"
             log_entry = (key, None)
             self._undo_log.append(log_entry)
             self._store.put(key, value)
-            self._acquired_locks.append((key, "x"))
-            if (key, "s") in self._acquired_locks:
-                redundant_lock = (key, "s")
-                self._acquired_locks.remove(redundant_lock)
             return 'Success'
         elif lock != None:
             if lock.curL == "x":
-                # if (key, "x") in self._acquired_locks:
                 if self._xid in lock.curT:
-                    if (key, "x") not in self._acquired_locks:
-                        self._acquired_locks.append((key, "x"))
-                    if (key, "s") in self._acquired_locks:
-                        self._acquired_locks.remove((key, "s"))
+                    self._acquired_locks[key] = "x"
                     log_entry = (key, self._store.get(key))
                     self._undo_log.append(log_entry)
                     self._store.put(key, value)
                     return 'Success'
                 else: 
-                    lock.queue.append([self._xid, "x"])
-                    self._desired_lock = (self._xid, "x")
-
+                    lock.queue.append([self._xid, "x", value])
+                    self._desired_lock = (key, "x")
             elif lock.curL == "s":
                 if self._xid in lock.curT:
                     #case 1: immediate update from "s" to "x" 
@@ -120,22 +114,19 @@ class TransactionHandler:
                         old_entry = (key, self._store.get(key))
                         self._undo_log.append(old_entry)
                         self._store.put(key, value)
-                        if (key, "s") in self._acquired_locks:
-                            self._acquired_locks.remove((key, "s"))
-                        if self._desired_lock == (key, "s"):
-                            self._desired_lock == None
-                        if (key, "x") not in self._acquired_locks:
-                            self._acquired_locks.append((key, "x"))
+                        self._acquired_locks[key] = "x"
+                        self._desired_lock == None
                         return 'Success'
                     # case 2: push to top of queue and wait for update
                     elif len(lock.curT) > 1 :
-                        lock.queue.insert(0,[self._xid, "x"]) 
+                        lock.queue.insert(0,[self._xid, "x", value]) 
                         self._desired_lock = (key, "x")
                 else:
-                    lock.queue.append([self.xid, "x"])
+                    lock.queue.append([self.xid, "x", value])
                     self._desired_lock = (key, "x")
 
-    def perform_get(self, key):                     
+    def perform_get(self, key):  
+
         """
         Handles the GET request. You should first implement the logic for
         acquiring the shared lock. If the transaction can successfully acquire
@@ -154,28 +145,33 @@ class TransactionHandler:
         self._desired_lock.
         """
         lock = self._lock_table.get(key)
-        if lock != None 
+        if lock != None :
             if self._xid not in lock.curT and lock.curL == "s":
                 if len(lock.queue) == 0:
                     lock.curT.append(self._xid)
-                    self._acquired_locks.append((key, "s"))
-                    return self._store.get(key)
+                    self._acquired_locks[key] = "s"
+                    value = self._store.get(key)
+                    if value == None:
+                        return 'No such key'
+                    return value
                 elif len(lock.queue) > 0:
-                    lock.queue.append([self._xid, "s"])
+                    lock.queue.append([self._xid, "s", None])
                     self._desired_lock = (key, "s")
             elif self._xid not in lock.curT and lock.curL == "x":
-                lock.queue.append([self._xid, "s"])
+                lock.queue.append([self._xid, "s", None])
                 self._desired_lock = (key, "s")
             elif self._xid in lock.curT:
-                return self._store.get(key)
-        else:
+                value = self._store.get(key)
+                if value == None:
+                    return 'No such key'
+                return value
+        elif lock == None:
+            self._lock_table[key] = _Lock([self._xid], "s")
+            self._acquired_locks[key] = "s"
             value = self._store.get(key)
             if value == None:
                 return "No such key"
-            elif value != None:
-                self._lock_table[key] = _Lock([self._xid], "s")
-                self._acquired_locks.append((key, "s"))
-                return value
+            return value
 
     def commit(self):
         """
@@ -194,7 +190,6 @@ class TransactionHandler:
     def abort(self, mode):
         """
         Aborts the transaction.
-
         Note: This method is already implemented for you, and you only need to
         implement the subroutine release_locks().
 
@@ -217,7 +212,7 @@ class TransactionHandler:
             return 'Deadlock Abort'
 
 
-    def release_and_grant_locks(self):                                      """如何update别的session的acquired locks呢？"""
+    def release_and_grant_locks(self):                                   
         """
         Releases all locks acquired by the transaction and grants them to the
         next transactions in the queue. This is a helper method that is called
@@ -229,39 +224,47 @@ class TransactionHandler:
 
         @param self: the transaction handler.
         """
+        # print "curT, curL, valToWrite just injected to curr after t0 commits"
+        # print lockObj.curT
+        # print lockObj.curL
+        # print lockObj.valToWrite
+        # print "#######"
+
+
         # remove lock still in queue
-        if self._desired_lock != None:
-            desired_key = self._desired_lock[0]
-            lockObjToModify = self._lock_table.get(key)
-            for i in range(len(lockObjToModify.queue)):
-                if i[0] = self._xid:
-                    lockObjToModify.queue.remove(i)
-
-        for l in self._acquired_locks:
-            key = l[0]
+        for key in self._acquired_locks:
             lockObj = self._lock_table.get(key)
-
+            # case 1: lock becomes None / current lock replaced
             if len(lockObj.curT) == 1:
                 if len(lockObj.queue) == 0:
-                    lockObj = None
+                    del self._lock_table[key]
                 elif len(lockObj.queue) > 0:
                     ll = lockObj.queue.pop(0)
-                    lockObj.curT = []
-                    lockObj.curT.append(ll[0])
+                    lockObj.curT = [ll[0]]
                     lockObj.curL = ll[1]
+                    lockObj.valToWrite = ll[2]
+            # case 2: lock gets update from s to x or normal replacement
             elif len(lockObj.curT) == 2:
                 lockObj.curT.remove(self._xid)
-                if len(lockObj.queue) != 0:
+                if len(lockObj.queue) > 0:
                     ll = lockObj.queue[0]
                     if lockObj.curT[0] ==  ll[0] and lockObj.curL == "s" and ll[1] == "x":
                         lockObj.queue.pop(0)
-                        lockObj.curL = "x"
-            elif len(lockObj.queue) > 2:
+                        lockObj.curL = ll[1]
+                        lockObj.valToWrite = ll[2] 
+            # case 3: multiple current locks left
+            elif len(lockObj.curT) > 2:
                 lockObj.curT.remove(self._xid)
-          
-        self._acquired_locks = []
-        self._desired_lock = None
 
+        if self._desired_lock != None:
+            desired_key = self._desired_lock[0]
+            lockObjToModify = self._lock_table.get(key)
+            if lockObjToModify != None:  
+                for i in range(len(lockObjToModify.queue)):
+                    if i[0] == self._xid:
+                        lockObjToModify.queue.remove(i)
+        self._desired_lock = None
+        self._acquired_locks = {}
 
     def check_lock(self):
         """
@@ -298,36 +301,41 @@ class TransactionHandler:
         successfully acquired the lock. If the lock has not been granted,
         returns None.
         """
-        key = self._desired_lock[0]
-        lockType = self._desired_lock[1]
 
-        lockObj = self._lock_table.get(key)
-        if lockType == "x":
-            if self._xid in lockObj.curT and lockObj.curL == "x":
-                old_val = self._store.get(key)
-                self._undo_log.append((key, old_val))
-                self._store.put(key, value)
-                if (key, "s") in self._acquired_locks
-                    self._acquired_locks.remove((key, "s"))
-                else:
-                    self._acquired_locks.append((key, "x"))
-                self._desired_lock = None
-                return 'Success'
-        elif lockType == "s":
-            if self._xid in lockObj.curT:
-                if lockObj.curL == "x" and (key, "x") not in self._acquired_locks:
-                    self._acquired_locks.append((key, "x"))
-                if lockObj.curL == "s" and (key, "s") not in self._acquired_locks:
-                    self._acquired_locks.append((key, "s"))
-                if (key, "x") in self._acquired_locks and (key, "s") in self._acquired_locks:
-                    self._acquired_locks.remove((key, "s"))
+        # lll = self._lock_table.get('a')
+        # print "check if new lock in place"
+        # print lll.curT
+        # print lll.curL
+        # print lll.valToWrite
+        # print "#######"
 
-                self._desired_lock = None
-                value = self._store.get(key)
-                if value == None:
-                    return 'No Such Key'
-                else:
-                    return value
+        if self._desired_lock != None:
+            key = self._desired_lock[0]
+            lockType = self._desired_lock[1]
+            lockObj = self._lock_table.get(key)
+            if lockObj != None:
+                if lockType == "x":
+                    if self._xid in lockObj.curT and lockObj.curL == lockType:
+                        old_entry = (key, self._store.get(key))
+                        self._undo_log.append(old_entry)
+
+                        # print "--------------"
+                        # print lockObj.valToWrite
+                        # print "--------------"
+
+                        self._store.put(key, lockObj.valToWrite)
+                        self._acquired_locks[key] = "x"
+                        self._desired_lock = None
+                        return 'Success'
+                elif lockType == "s":
+                    if self._xid in lockObj.curT:
+                        self._acquired_locks[key] = lockObj.curL
+                        self._desired_lock = None
+                        value = self._store.get(key)
+                        if value == None:
+                            return 'No Such Key'
+                        return value
+
 
 """
 Part II: Implement deadlock detection method for the transaction coordinator

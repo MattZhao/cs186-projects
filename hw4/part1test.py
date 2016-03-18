@@ -3,7 +3,24 @@ import unittest
 from kvstore import InMemoryKVStore
 from student import USER, TransactionHandler
 
+def helper(t0, t1):
+    print "t0 lock table : "
+    print t0._lock_table
+    print "t1 lock table : "
+    print t1._lock_table
+    print "t0 _acquired_locks : "
+    print t0._acquired_locks
+    print "t1 _acquired_locks : "
+    print t1._acquired_locks
+    print "t0 store"
+    print t0._store
+    print "t1 store"
+    print t1._store
+
+
 class Part1Test(unittest.TestCase):
+
+    # PASSED
     def test_commit(self):
         # Sanity check
         lock_table = {}
@@ -15,6 +32,7 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.commit(), 'Transaction Completed')
         self.assertEqual(store.get('a'), '0')
 
+    # PASSED
     def test_abort(self):
         # Sanity check
         lock_table = {}
@@ -26,6 +44,7 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.abort(USER), 'User Abort')
         self.assertEqual(store.get('a'), None)
 
+    # PASSED
     def test_multiple_read(self):
         # Sanity check
         lock_table = {}
@@ -41,6 +60,7 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t1.abort(USER), 'User Abort')
         self.assertEqual(t2.perform_get('a'), '0')
 
+    # PASSED
     def test_rw(self):
         # Should pass after 1.1
         lock_table = {}
@@ -48,23 +68,13 @@ class Part1Test(unittest.TestCase):
         t0 = TransactionHandler(lock_table, 0, store)
         t1 = TransactionHandler(lock_table, 1, store)
         self.assertEqual(t0.perform_get('a'), 'No such key')
-        self.assertEqual(t1.perform_get('a'), 'No such key')
+        self.assertEqual(t1.perform_get('a'), 'No such key')   
         self.assertEqual(t1.perform_put('a', '0'), None)
         self.assertEqual(t0.commit(), 'Transaction Completed')
         self.assertEqual(store.get('a'), None)
 
-    def test_wr(self):
-        # Should pass after 1.1
-        lock_table = {}
-        store = InMemoryKVStore()
-        t0 = TransactionHandler(lock_table, 0, store)
-        t1 = TransactionHandler(lock_table, 1, store)
-        self.assertEqual(t0.perform_get('a'), 'No such key')
-        self.assertEqual(t0.perform_put('a', '0'), 'Success')
-        self.assertEqual(t1.perform_get('a'), None)
-        self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(store.get('a'), '0')
 
+    # PASSED
     def test_ww(self):
         # Should pass after 1.1
         lock_table = {}
@@ -77,8 +87,9 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.commit(), 'Transaction Completed')
         self.assertEqual(store.get('a'), '0')
 
-    def test_commit_commit(self):
-        # Should pass after 1.2
+    # PASSED
+    def test_wr(self):
+        # Should pass after 1.1
         lock_table = {}
         store = InMemoryKVStore()
         t0 = TransactionHandler(lock_table, 0, store)
@@ -86,29 +97,11 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.perform_get('a'), 'No such key')
         self.assertEqual(t0.perform_put('a', '0'), 'Success')
         self.assertEqual(t0.perform_get('a'), '0')
+        self.assertEqual(t1.perform_get('a'), None)                 
         self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(t1.perform_get('a'), '0')
-        self.assertEqual(t1.perform_put('a', '1'), 'Success')
-        self.assertEqual(t1.perform_get('a'), '1')
-        self.assertEqual(t1.commit(), 'Transaction Completed')
-        self.assertEqual(store.get('a'), '1')
+        self.assertEqual(store.get('a'), '0')
 
-    def test_abort_commit(self):
-        # Should pass after 1.2
-        lock_table = {}
-        store = InMemoryKVStore()
-        t0 = TransactionHandler(lock_table, 0, store)
-        t1 = TransactionHandler(lock_table, 1, store)
-        self.assertEqual(t0.perform_get('a'), 'No such key')
-        self.assertEqual(t0.perform_put('a', '0'), 'Success')
-        self.assertEqual(t0.perform_get('a'), '0')
-        self.assertEqual(t0.abort(USER), 'User Abort')
-        self.assertEqual(t1.perform_get('a'), 'No such key')
-        self.assertEqual(t1.perform_put('a', '1'), 'Success')
-        self.assertEqual(t1.perform_get('a'), '1')
-        self.assertEqual(t1.commit(), 'Transaction Completed')
-        self.assertEqual(store.get('a'), '1')
-
+    # PASSED
     def test_commit_abort_commit(self):
         # Should pass after 1.2
         lock_table = {}
@@ -120,7 +113,7 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.perform_put('a', '0'), 'Success')
         self.assertEqual(t0.perform_get('a'), '0')
         self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(t1.perform_get('a'), '0')
+        self.assertEqual(t1.perform_get('a'), '0')              # AssertionError: None != '0'
         self.assertEqual(t1.perform_put('a', '1'), 'Success')
         self.assertEqual(t1.perform_get('a'), '1')
         self.assertEqual(t1.abort(USER), 'User Abort')
@@ -130,6 +123,41 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t2.commit(), 'Transaction Completed')
         self.assertEqual(store.get('a'), '2')
 
+    # PASSED
+    def test_abort_commit(self):
+        # Should pass after 1.2
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        self.assertEqual(t0.perform_get('a'), 'No such key')
+        self.assertEqual(t0.perform_put('a', '0'), 'Success')
+        self.assertEqual(t0.perform_get('a'), '0')
+        self.assertEqual(t0.abort(USER), 'User Abort')
+        self.assertEqual(t1.perform_get('a'), 'No such key')       
+        self.assertEqual(t1.perform_put('a', '1'), 'Success')
+        self.assertEqual(t1.perform_get('a'), '1')
+        self.assertEqual(t1.commit(), 'Transaction Completed')
+        self.assertEqual(store.get('a'), '1')
+
+    # PASSED
+    def test_commit_commit(self):
+        # Should pass after 1.2
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        self.assertEqual(t0.perform_get('a'), 'No such key')
+        self.assertEqual(t0.perform_put('a', '0'), 'Success')
+        self.assertEqual(t0.perform_get('a'), '0')
+        self.assertEqual(t0.commit(), 'Transaction Completed')
+        self.assertEqual(t1.perform_get('a'), '0')               
+        self.assertEqual(t1.perform_put('a', '1'), 'Success')
+        self.assertEqual(t1.perform_get('a'), '1')
+        self.assertEqual(t1.commit(), 'Transaction Completed')
+        self.assertEqual(store.get('a'), '1')
+
+    # PASSED
     def test_unlock_rw(self):
         # Should pass after 1.3
         lock_table = {}
@@ -142,9 +170,10 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(t1.check_lock(), 'Success')
+        self.assertEqual(t1.check_lock(), 'Success')            
         self.assertEqual(t1.perform_get('a'), '0')
 
+    # PASSED
     def test_unlock_wr(self):
         # Should pass after 1.3
         lock_table = {}
@@ -153,11 +182,12 @@ class Part1Test(unittest.TestCase):
         t1 = TransactionHandler(lock_table, 1, store)
         self.assertEqual(t0.perform_get('a'), 'No such key')
         self.assertEqual(t0.perform_put('a', '0'), 'Success')        # T0 W(a)
+        self.assertEqual(t0.perform_get('a'), '0')
         self.assertEqual(t1.perform_get('a'), None)                  # T1 R(a)
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(t1.check_lock(), '0')
+        self.assertEqual(t1.check_lock(), '0')                        
         self.assertEqual(t1.perform_get('a'), '0')
 
     def test_unlock_ww(self):
@@ -169,11 +199,20 @@ class Part1Test(unittest.TestCase):
         self.assertEqual(t0.perform_get('a'), 'No such key')
         self.assertEqual(t0.perform_put('a', '0'), 'Success')        # T0 W(a)
         self.assertEqual(t1.perform_put('a', '1'), None)             # T1 W(a)
+        self.assertEqual(t0.perform_get('a'), '0')
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t0.commit(), 'Transaction Completed')
-        self.assertEqual(t1.check_lock(), 'Success')
+        self.assertEqual(t1.check_lock(), 'Success')           # AssertionError: None != 'Success'
         self.assertEqual(t1.perform_get('a'), '1')
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+
+
+
+
+
