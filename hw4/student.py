@@ -1,5 +1,6 @@
 import logging
 
+from collections import deque
 from kvstore import DBMStore, InMemoryKVStore
 LOG_LEVEL = logging.WARNING
 
@@ -95,7 +96,7 @@ class TransactionHandler:
             self._undo_log.append(log_entry)
             self._store.put(key, value)
             return 'Success'
-        elif lock != None:
+        else :
             if lock.curL == "x":
                 if self._xid in lock.curT:
                     self._acquired_locks[key] = "x"
@@ -224,13 +225,6 @@ class TransactionHandler:
 
         @param self: the transaction handler.
         """
-        # print "curT, curL, valToWrite just injected to curr after t0 commits"
-        # print lockObj.curT
-        # print lockObj.curL
-        # print lockObj.valToWrite
-        # print "#######"
-
-
         # remove lock still in queue
         for key in self._acquired_locks:
             lockObj = self._lock_table.get(key)
@@ -301,14 +295,6 @@ class TransactionHandler:
         successfully acquired the lock. If the lock has not been granted,
         returns None.
         """
-
-        # lll = self._lock_table.get('a')
-        # print "check if new lock in place"
-        # print lll.curT
-        # print lll.curL
-        # print lll.valToWrite
-        # print "#######"
-
         if self._desired_lock != None:
             key = self._desired_lock[0]
             lockType = self._desired_lock[1]
@@ -318,11 +304,6 @@ class TransactionHandler:
                     if self._xid in lockObj.curT and lockObj.curL == lockType:
                         old_entry = (key, self._store.get(key))
                         self._undo_log.append(old_entry)
-
-                        # print "--------------"
-                        # print lockObj.valToWrite
-                        # print "--------------"
-
                         self._store.put(key, lockObj.valToWrite)
                         self._acquired_locks[key] = "x"
                         self._desired_lock = None
@@ -350,6 +331,70 @@ class TransactionCoordinator:
     def __init__(self, lock_table):
         self._lock_table = lock_table
 
+    def generate_adjacency_list(self):
+        temp_lst = []
+        pairs = []
+        for key,lock in self._lock_table.items():
+            temp_lst += lock.curT
+            req_list = []
+            for request in lock.queue:
+                req_id = request[0]
+                req_list.append(req_id)
+                temp_lst.append(req_id)
+            pairs.append([lock.curT, req_list])
+        adjacency = {}
+
+        threads_set = set(temp_lst)
+        print
+        print "got threads_set"
+        print repr(threads_set)
+        print "################"
+        print
+        print "got pairs"
+        print repr(pairs)
+        print "################"
+        print
+        for thread_id in threads_set:
+            adjacency[thread_id] = []
+        # print repr(adjacency)
+
+        for item in pairs:
+            granted_ids = item[0]
+            queued_ids = item[1]
+            if len(queued_ids) > 0 and len(granted_ids) > 0:
+                for gid in granted_ids:
+                    size = len(queued_ids)
+                    for x in range(size-1):
+                        if queued_ids[x] not in adjacency.get(gid):
+                            adjacency[gid].append(queued_ids[x])
+                        if queued_ids[x+1] not in adjacency.get(queued_ids[x]) :
+                            adjacency[queued_ids[x]].append(queued_ids[x+1])
+                    if queued_ids[size-1] not in adjacency.get(gid):
+                        adjacency[gid].append(queued_ids[size-1])
+
+
+
+        print "     the adjacency list is as follows"
+        print repr(adjacency)
+        print "################"
+
+        return adjacency
+
+    def run_dfs(self, adjacency, visited, stack):
+        while len(stack) > 0:
+            currID = stack.pop()
+            values = adjacency.get(currID)
+            if currID in visited:
+                print "got deadlock in dfs"
+                return currID
+            visited.append(currID)
+            for x in values:
+                if x ==  currID:
+                    continue
+                stack.append(x)
+        print "no deadlock in dfs"
+        return None
+
     def detect_deadlocks(self):
         """
         Constructs a waits-for graph from the lock table, and runs a cycle
@@ -376,4 +421,21 @@ class TransactionCoordinator:
         @return: If there are no cycles in the waits-for graph, returns None.
         Otherwise, returns the xid of a transaction in a cycle.
         """
-        pass # Part 2.1: your code here!
+        adjacency = self.generate_adjacency_list()
+        adj_iter = iter(adjacency)
+        visited = []
+        stack = deque(adjacency.keys())
+        return self.run_dfs(adjacency, visited, stack)
+
+
+
+
+
+
+
+
+
+
+
+
+
