@@ -331,70 +331,6 @@ class TransactionCoordinator:
     def __init__(self, lock_table):
         self._lock_table = lock_table
 
-    def generate_adjacency_list(self):
-        temp_lst = []
-        pairs = []
-        for key,lock in self._lock_table.items():
-            temp_lst += lock.curT
-            req_list = []
-            for request in lock.queue:
-                req_id = request[0]
-                req_list.append(req_id)
-                temp_lst.append(req_id)
-            pairs.append([lock.curT, req_list])
-        adjacency = {}
-
-        threads_set = set(temp_lst)
-        print
-        print "got threads_set"
-        print repr(threads_set)
-        print "################"
-        print
-        print "got pairs"
-        print repr(pairs)
-        print "################"
-        print
-        for thread_id in threads_set:
-            adjacency[thread_id] = []
-        # print repr(adjacency)
-
-        for item in pairs:
-            granted_ids = item[0]
-            queued_ids = item[1]
-            if len(queued_ids) > 0 and len(granted_ids) > 0:
-                for gid in granted_ids:
-                    size = len(queued_ids)
-                    for x in range(size-1):
-                        if queued_ids[x] not in adjacency.get(gid):
-                            adjacency[gid].append(queued_ids[x])
-                        if queued_ids[x+1] not in adjacency.get(queued_ids[x]) :
-                            adjacency[queued_ids[x]].append(queued_ids[x+1])
-                    if queued_ids[size-1] not in adjacency.get(gid):
-                        adjacency[gid].append(queued_ids[size-1])
-
-
-
-        print "     the adjacency list is as follows"
-        print repr(adjacency)
-        print "################"
-
-        return adjacency
-
-    def run_dfs(self, adjacency, visited, stack):
-        while len(stack) > 0:
-            currID = stack.pop()
-            values = adjacency.get(currID)
-            if currID in visited:
-                print "got deadlock in dfs"
-                return currID
-            visited.append(currID)
-            for x in values:
-                if x ==  currID:
-                    continue
-                stack.append(x)
-        print "no deadlock in dfs"
-        return None
-
     def detect_deadlocks(self):
         """
         Constructs a waits-for graph from the lock table, and runs a cycle
@@ -421,13 +357,54 @@ class TransactionCoordinator:
         @return: If there are no cycles in the waits-for graph, returns None.
         Otherwise, returns the xid of a transaction in a cycle.
         """
-        adjacency = self.generate_adjacency_list()
-        adj_iter = iter(adjacency)
+        adj_list = self.generate_adj_list()
+        stack = deque(adj_list.keys())
         visited = []
-        stack = deque(adjacency.keys())
-        return self.run_dfs(adjacency, visited, stack)
+        return self.run_dfs(adj_list, stack, visited)
+
+    def generate_adj_list(self):
+        pairs = []          # for each key
+        threads_set = []    # all unique thread names
+        adjacency = {}      # adjacency dictionary
+        for key,lock in self._lock_table.items():
+            threads_set += [x for x in lock.curT if x not in threads_set]
+            threads_set += [x[0] for x in lock.queue if x[0] not in threads_set]
+            if len(lock.curT) > 0 and len(lock.queue) > 0:
+                queued_ids = [x[0] for x in lock.queue]
+                pairs.append([lock.curT, queued_ids])
+
+        for thread_id in threads_set:
+            adjacency[thread_id] = []
+        for item in pairs:
+            granted_ids = item[0]
+            queued_ids = item[1]
+            for gid in granted_ids:
+                qLength = len(queued_ids)
+                index = qLength-1
+                while index >= 1 :
+                    if gid not in adjacency.get(queued_ids[index]):
+                        adjacency[queued_ids[index]].append(gid)
+                    if queued_ids[index-1] not in adjacency.get(queued_ids[index]):
+                        adjacency[queued_ids[index]].append(queued_ids[index-1])
+                    index -= 1
+                if gid not in adjacency.get(queued_ids[0]):
+                    adjacency[queued_ids[0]].append(gid)
+        return {k:v for k,v in adjacency.items() if v != []}
 
 
+    def run_dfs(self, adjacency, stack, visited):
+        while len(stack) > 0:
+            currID = stack.pop()
+            values = adjacency.get(currID)
+            if currID in visited:
+                return currID
+            visited.append(currID)
+            if values != None:
+                for x in values:
+                    if x ==  currID:
+                        continue
+                    stack.append(x)
+        return None
 
 
 
