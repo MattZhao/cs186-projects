@@ -32,7 +32,6 @@ class Part2Test(unittest.TestCase):
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t2.perform_put('a', 'a1'), None)            # T2 W(a)
         abort_id = coordinator.detect_deadlocks()
-        print abort_id
         self.assertTrue(abort_id == 1 or abort_id == 2)
 
     def test_deadlock_wr_rw(self):
@@ -58,8 +57,6 @@ class Part2Test(unittest.TestCase):
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t2.perform_get('a'), None)                  # T2 R(a)
         abort_id = coordinator.detect_deadlocks()
-        print
-        print abort_id
         self.assertTrue(abort_id == 1 or abort_id == 2)
 
     def test_deadlock_ww_rw(self):
@@ -85,9 +82,56 @@ class Part2Test(unittest.TestCase):
         self.assertEqual(t1.check_lock(), None)
         self.assertEqual(t2.perform_put('a', 'a2'), None)            # T2 W(a)
         abort_id = coordinator.detect_deadlocks()
-        print
-        print abort_id
         self.assertTrue(abort_id == 1 or abort_id == 2)
+
+
+    def test_deadlock_identical(self):
+        # Should pass after 2
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        coordinator = TransactionCoordinator(lock_table)
+        self.assertEqual(coordinator.detect_deadlocks(), None)
+        self.assertEqual(t0.perform_put('a', 'a0'), 'Success')
+        self.assertEqual(t0.perform_put('b', 'b0'), 'Success')
+        self.assertEqual(t2.perform_get('a'), None) 
+        self.assertEqual(t2.perform_get('b'), None) 
+
+    def test_deadlock_naive(self):
+        # Should pass after 2
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        coordinator = TransactionCoordinator(lock_table)
+        self.assertEqual(coordinator.detect_deadlocks(), None)
+        self.assertEqual(t0.perform_put('a', 'a0'), 'Success')
+        self.assertEqual(t0.commit(), 'Transaction Completed')
+        self.assertEqual(t0.perform_get('a'), 'a0') 
+        self.assertEqual(t2.perform_get('a'), 'a0')
+        self.assertEqual(t0.perform_put('a', 'ab'), None)
+        self.assertEqual(coordinator.detect_deadlocks(), None)
+
+    def test_deadlock_gap_queue(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+        t0 = TransactionHandler(lock_table, 0, store)
+        t1 = TransactionHandler(lock_table, 1, store)
+        t2 = TransactionHandler(lock_table, 2, store)
+        t3 = TransactionHandler(lock_table, 3, store)
+        coordinator = TransactionCoordinator(lock_table)
+        self.assertEqual(coordinator.detect_deadlocks(), None)
+        self.assertEqual(t2.perform_put('a', 'a0'), 'Success')
+        self.assertEqual(t0.perform_get('a'), None)
+        self.assertEqual(t3.perform_put('b', 'b0'), 'Success')        
+        self.assertEqual(t0.perform_get('b'), None)
+        self.assertEqual(t1.perform_put('b', 'b1'), None)
+        self.assertEqual(t2.perform_get('b'), None)
+        abort_id = coordinator.detect_deadlocks()
+        self.assertTrue(abort_id == 0 or abort_id == 2)
+
+
 
 if __name__ == '__main__':
     unittest.main()
