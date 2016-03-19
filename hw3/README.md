@@ -290,7 +290,7 @@ Instructions/Tips for `externalSortStream` (note that this is slightly different
   - `with` blocks will automatically close your file - use them accordingly.
  - If you can't decide on a file naming convention, use `get_sort_dir()` and move on.
  - You should probably get rid of your temporary file runs - you can use `os.unlink` to delete a file. Special note: it will not delete a file currently open/in use - if this function is called on a file, the file will not be deleted until the file is closed.
- - Merge is done for you via `heapq.merge`. Please reference the [API](http://people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html) for further information of usage.
+ - Merge is done for you via `heapq.merge`. Please reference the [API](http://people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html) for further information of usage. UPDATE: site is down, use [cached result](http://webcache.googleusercontent.com/search?q=cache:4fCs3W-u9m4J:people.apache.org/~tdas/spark-1.2-temp/api/python/pyspark.heapq3-module.html+&cd=1&hl=en&ct=clnk&gl=us)
  - Partial credit will be given for non-external (internal) sort implementations.
 
 ### 4.2 Bucket Sampling and Partitioning
