@@ -130,6 +130,40 @@ class Part2Test(unittest.TestCase):
         self.assertEqual(t2.perform_get('b'), None)
         abort_id = coordinator.detect_deadlocks()
         self.assertTrue(abort_id == 0 or abort_id == 2)
+    
+    def test_multi_deadlock(self):
+        lock_table = {}
+        store = InMemoryKVStore()
+	t0 = TransactionHandler(lock_table, 0, store)
+	t1 = TransactionHandler(lock_table, 1, store)
+	t2 = TransactionHandler(lock_table, 2, store)
+	t3 = TransactionHandler(lock_table, 3, store)
+	t4 = TransactionHandler(lock_table, 4, store)
+	coordinator = TransactionCoordinator(lock_table)
+	self.assertEqual(coordinator.detect_deadlocks(), None)
+	self.assertEqual(t0.perform_put('a', 'apple'), 'Success')
+	self.assertEqual(t0.commit(), 'Transaction Completed')
+	self.assertEqual(t1.perform_get('a'), 'apple')
+	self.assertEqual(t2.perform_get('a'), 'apple')
+	self.assertEqual(coordinator.detect_deadlocks(), None)
+	self.assertEqual(t1.perform_put('a', 'banana'), None)
+	self.assertEqual(t2.perform_put('a', 'pear'), None)
+	self.assertEqual(t3.perform_put('a', 'cherry'), None)
+	self.assertEqual(t4.perform_put('a', 'orange'),None)
+	aid = coordinator.detect_deadlocks()
+	self.assertTrue(aid == 2 or aid == 1)
+	self.assertEqual(t2.check_lock(), None)
+	self.assertEqual(t1.abort(USER), 'User Abort')
+
+	self.assertEqual(t2.check_lock(), 'Success')
+	self.assertEqual(t2.perform_get('a'), 'pear')
+	self.assertEqual(t3.check_lock(), None)
+	self.assertEqual(t4.check_lock(), None)
+
+	aa = coordinator.detect_deadlocks()
+	self.assertEqual(aa, None)
+
+
 
 
 

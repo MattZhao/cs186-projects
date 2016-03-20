@@ -225,6 +225,14 @@ class TransactionHandler:
 
         @param self: the transaction handler.
         """
+	if self._desired_lock != None:
+	    desired_key = self._desired_lock[0]
+	    lockObj = self._lock_table.get(desired_key)
+    	    if lockObj != None:
+      	        for req_lock in lockObj.queue:
+    		    if req_lock[0] == self._xid:
+		        lockObj.queue.remove(req_lock)	
+
         # remove lock still in queue
         for key in self._acquired_locks:
             lockObj = self._lock_table.get(key)
@@ -250,13 +258,6 @@ class TransactionHandler:
             elif len(lockObj.curT) > 2:
                 lockObj.curT.remove(self._xid)
 
-        if self._desired_lock != None:
-            desired_key = self._desired_lock[0]
-            lockObjToModify = self._lock_table.get(key)
-            if lockObjToModify != None:  
-                for i in range(len(lockObjToModify.queue)):
-                    if i[0] == self._xid:
-                        lockObjToModify.queue.remove(i)
         self._desired_lock = None
         self._acquired_locks = {}
 
