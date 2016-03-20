@@ -118,9 +118,22 @@ class TransactionHandler:
                         self._acquired_locks[key] = "x"
                         self._desired_lock == None
                         return 'Success'
-                    # case 2: push to top of queue and wait for update
+                    # case 2: push to top end of queue and wait for update
+                    #         here we try to maintain the relative order of conflicting locks
                     elif len(lock.curT) > 1 :
-                        lock.queue.insert(0,[self._xid, "x", value]) 
+                        if len(lock.queue) == 0:
+                            lock.queue.insert(0,[self._xid, "x", value]) 
+                        else:
+                            i = 0
+                            flag = False
+                            while i < len(lock.queue)-1:
+                                if lock.queue[i][0] in lock.curT and lock.queue[i+1][0] not in lock.curT:
+                                    lock.queue.insert(i+1,[self._xid, "x", value]) 
+                                    flag = True
+                                    break
+                                index += 1
+                            if flag == False:
+                                lock.queue.append([self._xid, "x", value]) 
                         self._desired_lock = (key, "x")
                 else:
                     lock.queue.append([self._xid, "x", value])
@@ -359,54 +372,47 @@ class TransactionCoordinator:
         Otherwise, returns the xid of a transaction in a cycle.
         """
         adj_list = self.generate_adj_list()
-        stack = deque(adj_list.keys())
-        visited = []
-        return self.run_dfs(adj_list, stack, visited)
-
-    def generate_adj_list(self):
-        pairs = []          # for each key
-        threads_set = []    # all unique thread names
-        adjacency = {}      # adjacency dictionary
-        for key,lock in self._lock_table.items():
-            threads_set += [x for x in lock.curT if x not in threads_set]
-            threads_set += [x[0] for x in lock.queue if x[0] not in threads_set]
-            if len(lock.curT) > 0 and len(lock.queue) > 0:
-                queued_ids = [x[0] for x in lock.queue]
-                pairs.append([lock.curT, queued_ids])
-
-        for thread_id in threads_set:
-            adjacency[thread_id] = []
-        for item in pairs:
-            granted_ids = item[0]
-            queued_ids = item[1]
-            for gid in granted_ids:
-                qLength = len(queued_ids)
-                index = qLength-1
-                while index >= 1 :
-                    if gid not in adjacency.get(queued_ids[index]):
-                        adjacency[queued_ids[index]].append(gid)
-                    if queued_ids[index-1] not in adjacency.get(queued_ids[index]):
-                        adjacency[queued_ids[index]].append(queued_ids[index-1])
-                    index -= 1
-                if gid not in adjacency.get(queued_ids[0]):
-                    adjacency[queued_ids[0]].append(gid)
-        return {k:v for k,v in adjacency.items() if v != []}
-
-
-    def run_dfs(self, adjacency, stack, visited):
-        while len(stack) > 0:
-            currID = stack.pop()
-            values = adjacency.get(currID)
-            if currID in visited:
-                return currID
-            visited.append(currID)
-            if values != None:
-                for x in values:
-                    if x ==  currID:
-                        continue
-                    stack.append(x)
+        if len(adj_list) == 0:
+            return None
+        for node in adj_list.keys():
+            retval = [None]     # primitive types are not passed by reference
+            temp_v =[]
+            self.dfs(node, temp_v, adj_list, retval)
+            if retval[0] != None:
+                return retval[0]
         return None
 
+    def dfs(self, node, temp_v, adj_list, retval):
+        if node in temp_v:
+            retval[0] = node
+            return
+        kids = adj_list.get(node)
+        if kids == None:
+            return
+        for kid in kids:
+            temp_v.append(node)
+            self.dfs(kid, temp_v, adj_list, retval)
+            temp_v.remove(node)
+
+    def generate_adj_list(self):
+            pairs = []          # for each key
+            threads_set = []    # all unique thread names
+            adjacency = {}      # adjacency dictionary
+            for key,lock in self._lock_table.items():
+                threads_set += [x for x in lock.curT if x not in threads_set]
+                threads_set += [x[0] for x in lock.queue if x[0] not in threads_set]
+                if len(lock.curT) > 0 and len(lock.queue) > 0:
+                    queued_ids = [x[0] for x in lock.queue]
+                    pairs.append([lock.curT, queued_ids])
+            for thread_id in threads_set:
+                adjacency[thread_id] = []
+            for granted_ids, queued_ids in pairs:
+                for gid in granted_ids:
+                    for qqid in queued_ids:
+                        if (gid != qqid) and (gid not in adjacency[qqid]):
+                            adjacency[qqid].append(gid)
+            adjacency = {k:v for k,v in adjacency.items() if v != []}
+            return adjacency
 
 
 
@@ -417,3 +423,4 @@ class TransactionCoordinator:
 
 
 
+   
